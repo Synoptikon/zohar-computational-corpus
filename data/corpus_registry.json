@@ -1,0 +1,38 @@
+{
+  "registry_version": "0.1.0",
+  "updated_at": "2026-09-13",
+  "sources": [
+    {
+      "cid": "CID-ZOHAR-SEFARIA-VOCALIZED-2013",
+      "status": "BLOCKED_LICENSE",
+      "role": "primary-language-candidate",
+      "source": "Sefaria",
+      "source_url": "https://www.sefaria.org/Zohar",
+      "api_documentation": "https://developers.sefaria.org/reference/get-v3-texts",
+      "edition": "Vocalized Zohar, Israel 2013",
+      "language": "he",
+      "version": "Vocalized Zohar, Israel 2013",
+      "license": "unknown",
+      "license_evidence_url": "https://www.sefaria.org/Zohar?tab=versions",
+      "raw_path": null,
+      "sha256": null,
+      "notes": "Catalogued by Sefaria as a Hebrew source from nli.org.il; reuse status is not specified in the current catalog entry. Do not redistribute text until independently verified."
+    },
+    {
+      "cid": "CID-ZOHAR-SEFARIA-SONCINO-1933",
+      "status": "CANDIDATE",
+      "role": "translation-auxiliary",
+      "source": "Sefaria",
+      "source_url": "https://www.sefaria.org/Zohar",
+      "api_documentation": "https://developers.sefaria.org/reference/get-v3-texts",
+      "edition": "The Zohar; London, Soncino Press, 1933",
+      "language": "en",
+      "version": "The Zohar; London, Soncino Press, 1933",
+      "license": "Public Domain",
+      "license_evidence_url": "https://www.sefaria.org/Zohar?tab=versions",
+      "raw_path": null,
+      "sha256": null,
+      "notes": "Eligible as an auxiliary translation candidate according to the current Sefaria catalog entry. A local snapshot and hash are still required before GATE-001 can be validated."
+    }
+  ]
+}
