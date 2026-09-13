@@ -27,7 +27,7 @@ ROOT_CATEGORIES = [
     "קטגוריה:זהר חלק ב",
     "קטגוריה:זהר חלק ג",
 ]
-USER_AGENT = "zohar-computational-corpus/0.3 (reproducible research acquisition)"
+USER_AGENT = "zohar-computational-corpus/0.4 (reproducible research acquisition)"
 MAX_TITLES_PER_REQUEST = 50
 MAX_RETRIES = 8
 
@@ -114,7 +114,12 @@ def category_pages(category: str) -> list[str]:
 
 
 def fetch_revisions(titles: list[str]) -> dict[str, dict]:
-    """Fetch one latest revision per title using MediaWiki's batched title API."""
+    """Fetch one latest revision per title using MediaWiki's batched title API.
+
+    MediaWiki rejects ``rvlimit`` when multiple titles are supplied. The API's
+    default revision limit is one for this query shape, so the batch request
+    deliberately omits ``rvlimit`` rather than issuing one request per page.
+    """
     revisions: dict[str, dict] = {}
     for start in range(0, len(titles), MAX_TITLES_PER_REQUEST):
         batch = titles[start : start + MAX_TITLES_PER_REQUEST]
@@ -125,7 +130,6 @@ def fetch_revisions(titles: list[str]) -> dict[str, dict]:
                 "titles": "|".join(batch),
                 "rvprop": "content|ids|timestamp",
                 "rvslots": "main",
-                "rvlimit": "1",
             }
         )
         for page in data["query"]["pages"]:
