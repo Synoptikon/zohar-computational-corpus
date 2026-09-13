@@ -1,0 +1,33 @@
+project:
+  id: zohar-computational-corpus
+  version: 0.1.0
+  status: IN_PROGRESS
+
+layers:
+  - RAW
+  - NORMALIZED
+  - ANNOTATED
+  - MODELED
+
+identifiers:
+  corpus: CID
+  segment: SID
+  entity: EID
+  relation: RID
+  hypothesis: HID
+  model: MID
+  experiment: EXP-ID
+  finding: FID
+  gate: GATE-ID
+
+validation_gates:
+  GATE-001: Corpus válido
+  GATE-002: Segmentación reproducible
+  GATE-003: Esquema de anotación definido
+  GATE-004: Codificación validada
+  GATE-005: Modelo reproducible
+  GATE-006: Métricas calculables
+  GATE-007: Baseline establecido
+  GATE-008: Experimento ejecutable
+  GATE-009: Resultado reproducible
+  GATE-010: Conclusión auditable
