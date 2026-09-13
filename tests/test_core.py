@@ -17,17 +17,24 @@ def test_manifest_has_required_provenance_fields():
     manifest = CorpusManifest(
         cid="CID-001",
         source="UNVERIFIED",
+        source_url="UNVERIFIED",
         edition="UNVERIFIED",
         language="UNVERIFIED",
         version="UNVERIFIED",
-        sha256="UNVERIFIED",
+        retrieved_at="UNVERIFIED",
+        sha256="0" * 64,
+        format="text/plain",
+        license="UNVERIFIED",
+        license_evidence_url="UNVERIFIED",
+        raw_path="data/raw/example.txt",
         normalization="NFC + whitespace",
         segmentation="punctuation-v0",
-        license="UNVERIFIED",
     )
     data = manifest.to_dict()
     assert data["cid"] == "CID-001"
     assert set(data) == {
-        "cid", "source", "edition", "language", "version",
-        "sha256", "normalization", "segmentation", "license",
+        "cid", "source", "source_url", "edition", "language", "version",
+        "retrieved_at", "sha256", "format", "license", "license_evidence_url",
+        "raw_path", "normalization", "segmentation",
     }
+    manifest.validate()
