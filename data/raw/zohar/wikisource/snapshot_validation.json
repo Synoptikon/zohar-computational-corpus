@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "validation": "PASS",
+  "page_count": 1721,
+  "manifest_sha256": "9081654d6565773aaa9374fc4b05e7fe060d1b7b945c5430463a75c53c7f7b0c",
+  "sample_seed": 20260913,
+  "sample_sequences": [
+    1,
+    196,
+    389,
+    477,
+    1275,
+    1608,
+    1617,
+    1667,
+    1709,
+    1721
+  ],
+  "sample_failures": [],
+  "checks": [
+    "manifest exists",
+    "explicit license metadata",
+    "unique page sequence/title",
+    "all files exist",
+    "per-file SHA-256 matches manifest",
+    "non-empty files",
+    "deterministic structural sample contains Hebrew-script characters"
+  ],
+  "limitations": [
+    "This validates acquisition integrity, not textual correctness against a historical witness.",
+    "A Wikisource transcription remains a collaborative transcription rather than a critical edition."
+  ]
+}
