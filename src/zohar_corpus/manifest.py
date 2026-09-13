@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 import hashlib
 import json
 from pathlib import Path
@@ -8,20 +8,39 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class CorpusManifest:
-    """Minimal provenance record for a corpus artifact."""
+    """Immutable provenance record for one exact corpus artifact."""
 
     cid: str
     source: str
+    source_url: str
     edition: str
     language: str
     version: str
+    retrieved_at: str
     sha256: str
+    format: str
+    license: str
+    license_evidence_url: str
+    raw_path: str
     normalization: str
     segmentation: str
-    license: str
 
     def to_dict(self) -> dict[str, str]:
         return asdict(self)
+
+    def validate(self) -> None:
+        """Validate required provenance fields without inspecting corpus semantics."""
+        required = self.to_dict()
+        missing = [key for key, value in required.items() if not value]
+        if missing:
+            raise ValueError(f"Missing required provenance fields: {', '.join(missing)}")
+
+        if len(self.sha256) != 64:
+            raise ValueError("sha256 must contain exactly 64 hexadecimal characters")
+        try:
+            int(self.sha256, 16)
+        except ValueError as exc:
+            raise ValueError("sha256 must be hexadecimal") from exc
 
 
 def sha256_file(path: str | Path) -> str:
@@ -34,7 +53,8 @@ def sha256_file(path: str | Path) -> str:
 
 
 def write_manifest(manifest: CorpusManifest, path: str | Path) -> None:
-    """Write a deterministic JSON manifest."""
+    """Write a deterministic JSON manifest after validating provenance."""
+    manifest.validate()
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
