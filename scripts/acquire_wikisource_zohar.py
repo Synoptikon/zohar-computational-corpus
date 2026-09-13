@@ -19,6 +19,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 API = "https://he.wikisource.org/w/api.php"
+SOURCE_URL = "https://he.wikisource.org/wiki/ספר_הזהר"
 ROOT_CATEGORIES = [
     "קטגוריה:זהר חלק א",
     "קטגוריה:זהר חלק ב",
@@ -67,7 +68,7 @@ def category_pages(category: str) -> list[str]:
     return sorted(set(pages))
 
 
-def fetch_wikitext(title: str) -> str:
+def fetch_revision(title: str) -> dict:
     data = api(
         {
             "action": "query",
@@ -75,11 +76,17 @@ def fetch_wikitext(title: str) -> str:
             "titles": title,
             "rvprop": "content|ids|timestamp",
             "rvslots": "main",
+            "rvlimit": "1",
         }
     )
     page = data["query"]["pages"][0]
     revision = page["revisions"][0]
-    return revision["slots"]["main"]["content"]
+    return {
+        "pageid": page["pageid"],
+        "revid": revision["revid"],
+        "revision_timestamp": revision["timestamp"],
+        "wikitext": revision["slots"]["main"]["content"],
+    }
 
 
 def sha256(path: Path) -> str:
@@ -97,19 +104,23 @@ def main() -> None:
     args = parser.parse_args()
 
     args.output.mkdir(parents=True, exist_ok=True)
-    manifest = []
+    manifest: list[dict] = []
 
     titles = sorted({title for category in ROOT_CATEGORIES for title in category_pages(category)})
 
     for index, title in enumerate(titles, start=1):
-        text = fetch_wikitext(title)
+        revision = fetch_revision(title)
         relative = f"{index:04d}.txt"
         target = args.output / relative
-        target.write_text(text, encoding="utf-8", newline="\n")
+        target.write_text(revision["wikitext"], encoding="utf-8", newline="\n")
         manifest.append(
             {
                 "sequence": index,
                 "title": title,
+                "pageid": revision["pageid"],
+                "revid": revision["revid"],
+                "revision_timestamp": revision["revision_timestamp"],
+                "source_url": f"https://he.wikisource.org/wiki/{title.replace(' ', '_')}",
                 "path": str(target),
                 "sha256": sha256(target),
             }
@@ -120,9 +131,12 @@ def main() -> None:
     manifest_path.write_text(
         json.dumps(
             {
-                "source": "https://he.wikisource.org/wiki/ספר_הזהר",
+                "schema_version": "1.0",
+                "source": SOURCE_URL,
+                "api": API,
                 "license": "CC BY-SA 4.0",
                 "retrieved_at_unix": int(time.time()),
+                "page_count": len(manifest),
                 "pages": manifest,
             },
             ensure_ascii=False,
