@@ -1,40 +1,73 @@
 # GATE-001 — Corpus válido
 
-**Status:** BLOCKED
+**Status:** IN_PROGRESS / NOT VALIDATED
 
 ## Objective
 
 Establish one or more corpus snapshots whose provenance, integrity, scope, and reuse status are independently auditable.
 
-## Evidence collected
+## Selected primary-language candidate
 
-Sefaria provides a structured API for text retrieval. Its current documentation describes the v3 Texts endpoint and a separate Versions endpoint for version metadata.
+**CID:** `CID-ZOHAR-WIKISOURCE-MANTUA`
 
-The current Sefaria catalog identifies:
+The Hebrew Wikisource edition documents the Mantua 1558 (5318) edition as the basis for its page numbering and exposes the Zohar in Hebrew/Aramaic. The source page currently states that its text is distributed under **Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0)**.
 
-- `Vocalized Zohar, Israel 2013` — Hebrew, source attributed to nli.org.il, license currently unspecified in the catalog.
-- `The Zohar; London, Soncino Press, 1933` — English translation, source attributed to nli.org.il, listed as Public Domain.
+Source:
+https://he.wikisource.org/wiki/ספר_הזהר
 
-## Decision
+The corpus scope for the first snapshot is deliberately limited to:
 
-No Zohar Hebrew text is stored in `data/raw/` at this stage.
+- Zohar Part I — Genesis
+- Zohar Part II — Exodus
+- Zohar Part III — Leviticus, Numbers and Deuteronomy
 
-The Hebrew candidate remains `BLOCKED_LICENSE` because the repository must not redistribute a source whose reuse status is unresolved.
+Tikunei Zohar and Zohar Chadash remain separate auxiliary corpora and are not silently mixed into the primary corpus.
 
-The Soncino English translation is an eligible auxiliary candidate, but it has not yet been snapshotted and hashed in this repository. Therefore it cannot yet satisfy GATE-001.
+## Acquisition
+
+Acquisition is implemented through:
+
+`scripts/acquire_wikisource_zohar.py`
+
+The script uses the Hebrew Wikisource MediaWiki API, recursively traverses the three selected Zohar categories, retrieves page wikitext, writes UTF-8 RAW files, and produces a per-page SHA-256 manifest.
+
+No normalization, segmentation, annotation, embedding, or interpretation is performed during acquisition.
+
+## License status
+
+**VERIFIED_AT_SOURCE:** CC BY-SA 4.0 for the Wikisource text layer.
+
+Redistribution must preserve attribution and the applicable ShareAlike requirements.
+
+This does not mean that the Wikisource transcription is a critical edition or that every transcription is independently verified. Textual quality remains a separate validation problem.
+
+## Provenance status
+
+**DOCUMENTED_BUT_NOT_YET_INDEPENDENTLY_COLLATION_VALIDATED**
+
+Wikisource identifies the Mantua edition as the basis for page numbering, but the repository does not yet have an independent collation against a digitized historical witness.
+
+A National Library of Israel digitized Zohar witness is available as an independent provenance/reference candidate and can be used for future collation. Its individual use conditions must be recorded separately from the Wikisource license.
+
+## Current decision
+
+The primary-language source is now **license-eligible for acquisition**, but GATE-001 remains **NOT VALIDATED** because the immutable snapshot has not yet been acquired into `data/raw/`, hashed, and independently checked in this repository.
 
 ## Required evidence before validation
 
-1. Define the initial corpus scope.
-2. Verify the reuse status of the selected primary-language edition.
-3. Acquire an exact snapshot through a documented method.
-4. Store the immutable RAW artifact.
-5. Compute SHA-256 over the exact artifact.
-6. Record retrieval timestamp in UTC.
-7. Record edition/version/source metadata.
-8. Verify the manifest against the stored artifact.
-9. Run an independent integrity check.
+1. Execute the acquisition script.
+2. Preserve the exact RAW snapshot.
+3. Compute and record SHA-256 for every acquired page.
+4. Record UTC retrieval timestamp.
+5. Record the source revision/page identifiers where available.
+6. Verify the manifest against the stored files.
+7. Run an independent integrity check.
+8. Perform an initial transcription-quality audit on a predefined sample.
+9. Record the sample methodology and error findings.
+10. Do not normalize or segment RAW during this gate.
 
 ## What this gate does not establish
 
-GATE-001 does not establish textual authenticity, historical authorship, semantic correctness, or superiority of one edition over another. It establishes only that the selected computational corpus is sufficiently identified and reproducible for subsequent computational analysis.
+GATE-001 does not establish textual authenticity, historical authorship, semantic correctness, superiority of the Mantua witness, or correctness of every Wikisource transcription.
+
+It establishes only that the selected computational corpus is sufficiently identified, legally documented for the intended reuse, immutable at snapshot level, and reproducible enough to proceed to corpus-quality validation.
