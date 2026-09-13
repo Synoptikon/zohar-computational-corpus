@@ -48,4 +48,4 @@ def test_sha256_file(tmp_path: Path) -> None:
     path = tmp_path / "sample.txt"
     path.write_text("zohar\n", encoding="utf-8")
 
-    assert sha256_file(path) == "be02b8f6d5c9bfa1c7a9e8c11b7b2f2f2e4d9d1e2c7e8d2e8a6f9d7a3b8f2f5e"
+    assert sha256_file(path) == "1fa6e97b3fc1df83235651afbc7c1ca9cc38542503a3d3f4d04306c997824f90"
