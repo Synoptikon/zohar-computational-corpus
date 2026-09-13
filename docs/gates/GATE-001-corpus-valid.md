@@ -8,7 +8,7 @@ Establish one or more corpus snapshots whose provenance, integrity, scope, and r
 
 ## Evidence collected
 
-The project identified Sefaria as a viable structured acquisition interface. Its current API documentation states that text versions can be retrieved through the v3 Texts endpoint and that version metadata can be queried separately.
+Sefaria provides a structured API for text retrieval. Its current documentation describes the v3 Texts endpoint and a separate Versions endpoint for version metadata.
 
 The current Sefaria catalog identifies:
 
@@ -32,9 +32,8 @@ The Soncino English translation is an eligible auxiliary candidate, but it has n
 5. Compute SHA-256 over the exact artifact.
 6. Record retrieval timestamp in UTC.
 7. Record edition/version/source metadata.
-8. Record the segmentation basis separately from normalization.
-9. Verify the manifest against the stored artifact.
-10. Run an independent integrity check.
+8. Verify the manifest against the stored artifact.
+9. Run an independent integrity check.
 
 ## What this gate does not establish
 
