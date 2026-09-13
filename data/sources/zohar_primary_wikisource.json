@@ -1,0 +1,30 @@
+{
+  "cid": "CID-ZOHAR-WIKISOURCE-MANTUA",
+  "title": "Sefer ha-Zohar — Hebrew/Aramaic Wikisource transcription",
+  "language": ["he", "arc"],
+  "corpus_scope": [
+    "Zohar Part I (Genesis)",
+    "Zohar Part II (Exodus)",
+    "Zohar Part III (Leviticus, Numbers, Deuteronomy)"
+  ],
+  "source_platform": "Wikisource (Hebrew)",
+  "source_url": "https://he.wikisource.org/wiki/ספר_הזהר",
+  "source_license": "CC BY-SA 4.0",
+  "license_status": "VERIFIED_AT_SOURCE",
+  "license_evidence": "https://he.wikisource.org/wiki/ספר_הזהר",
+  "textual_witness": "Mantua edition (1558 / 5318) is identified by the source as the basis for the page numbering.",
+  "textual_witness_status": "DOCUMENTED_BUT_NOT_YET_INDEPENDENTLY_COLLATION_VALIDATED",
+  "acquisition_method": "MediaWiki API, recursive category traversal, wikitext export",
+  "acquisition_script": "scripts/acquire_wikisource_zohar.py",
+  "raw_path": "data/raw/zohar/wikisource/",
+  "hash_algorithm": "SHA-256",
+  "snapshot_hash": null,
+  "retrieved_at": null,
+  "status": "CANDIDATE_PRIMARY",
+  "limitations": [
+    "Wikisource is a collaborative transcription and is not itself a critical edition.",
+    "Individual pages may be marked as unchecked; transcription quality must be measured before scientific use.",
+    "The repository must preserve the acquired snapshot and its manifest rather than relying on the live website.",
+    "CC BY-SA obligations must be preserved in redistributed derivatives."
+  ]
+}
