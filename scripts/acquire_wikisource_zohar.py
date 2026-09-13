@@ -27,30 +27,59 @@ ROOT_CATEGORIES = [
     "קטגוריה:זהר חלק ב",
     "קטגוריה:זהר חלק ג",
 ]
-USER_AGENT = "zohar-computational-corpus/0.2 (reproducible research acquisition)"
+USER_AGENT = "zohar-computational-corpus/0.3 (reproducible research acquisition)"
 MAX_TITLES_PER_REQUEST = 50
-MAX_RETRIES = 6
+MAX_RETRIES = 8
 
 
 def api(params: dict[str, str]) -> dict:
+    """Call MediaWiki with retry/backoff for HTTP and API-level transient errors."""
     query = urlencode({"format": "json", "formatversion": "2", **params})
     url = f"{API}?{query}"
+    last_error: str | None = None
+
     for attempt in range(MAX_RETRIES):
-        req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+        req = Request(
+            url,
+            headers={
+                "User-Agent": USER_AGENT,
+                "Accept": "application/json",
+            },
+        )
         try:
             with urlopen(req, timeout=60) as response:
-                return json.load(response)
+                data = json.load(response)
         except HTTPError as exc:
-            if exc.code != 429 or attempt == MAX_RETRIES - 1:
+            if exc.code not in {429, 500, 502, 503, 504} or attempt == MAX_RETRIES - 1:
                 raise
             retry_after = exc.headers.get("Retry-After")
             if retry_after and retry_after.isdigit():
                 delay = float(retry_after)
             else:
-                delay = min(60.0, 2.0 ** attempt) + random.uniform(0.0, 0.5)
+                delay = min(90.0, 2.0 ** attempt) + random.uniform(0.0, 0.5)
             time.sleep(delay)
+            continue
 
-    raise RuntimeError("unreachable: API retry loop exhausted")
+        if "error" not in data:
+            return data
+
+        error = data["error"]
+        code = str(error.get("code", "unknown"))
+        info = str(error.get("info", ""))
+        last_error = f"MediaWiki API error {code}: {info}".strip()
+
+        transient_codes = {"ratelimited", "maxlag", "readonly", "internal_api_error_DBQueryError"}
+        if code not in transient_codes or attempt == MAX_RETRIES - 1:
+            raise RuntimeError(last_error)
+
+        retry_after = error.get("retry-after")
+        if isinstance(retry_after, (int, float)):
+            delay = float(retry_after)
+        else:
+            delay = min(90.0, 2.0 ** attempt) + random.uniform(0.0, 0.5)
+        time.sleep(delay)
+
+    raise RuntimeError(last_error or "MediaWiki API retry loop exhausted")
 
 
 def category_pages(category: str) -> list[str]:
@@ -127,13 +156,16 @@ def sha256(path: Path) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=Path("data/raw/zohar/wikisource"))
-    parser.add_argument("--delay", type=float, default=0.1, help="Legacy per-page delay; retained for CLI compatibility.")
+    parser.add_argument("--delay", type=float, default=0.1, help="Delay between completed page writes.")
     args = parser.parse_args()
 
     args.output.mkdir(parents=True, exist_ok=True)
     manifest: list[dict] = []
 
     titles = sorted({title for category in ROOT_CATEGORIES for title in category_pages(category)})
+    if not titles:
+        raise RuntimeError("No namespace-0 pages were discovered in the configured Zohar categories")
+
     revisions = fetch_revisions(titles)
 
     for index, title in enumerate(titles, start=1):
