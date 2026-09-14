@@ -19,6 +19,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: gate-004-pilot
+  cancel-in-progress: false
+
 defaults:
   run:
     shell: bash
@@ -107,7 +111,7 @@ jobs:
           normalized = json.loads(Path('data/analysis/normalized_offsets_audit.json').read_text(encoding='utf-8'))
 
           evidence = {
-              'evidence_version': 'GATE-004-PILOT-EVIDENCE-0.2',
+              'evidence_version': 'GATE-004-PILOT-EVIDENCE-0.3',
               'pilot_status': 'EXECUTED',
               'annotation_status': 'NOT_YET_ANNOTATED',
               'pilot': {
