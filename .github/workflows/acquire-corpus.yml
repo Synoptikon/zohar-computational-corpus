@@ -32,6 +32,59 @@ jobs:
       - name: Validate snapshot integrity and structural sample
         run: python scripts/validate_corpus_snapshot.py data/raw/zohar/wikisource
 
+      - name: Independent RAW manifest verification
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path('data/raw/zohar/wikisource')
+          manifest_path = root / 'snapshot_manifest.json'
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          pages = manifest.get('pages', [])
+          errors = []
+          manifest_paths = set()
+          sequences = set()
+
+          for item in pages:
+              path = Path(item['path'])
+              manifest_paths.add(str(path))
+              sequences.add(item['sequence'])
+              if not path.is_file():
+                  errors.append({'path': str(path), 'error': 'missing_file'})
+                  continue
+              actual = hashlib.sha256(path.read_bytes()).hexdigest()
+              if actual != item['sha256']:
+                  errors.append({
+                      'path': str(path),
+                      'error': 'sha256_mismatch',
+                      'expected': item['sha256'],
+                      'actual': actual,
+                  })
+
+          actual_paths = {str(p) for p in root.glob('*.txt')}
+          result = {
+              'evidence_version': 'GATE-001-INDEPENDENT-INTEGRITY-0.1',
+              'status': 'PASS' if not errors and actual_paths == manifest_paths else 'FAIL',
+              'page_count_manifest': manifest.get('page_count'),
+              'page_records': len(pages),
+              'actual_txt_files': len(actual_paths),
+              'unique_sequences': len(sequences),
+              'sha256_mismatches': sum(e['error'] == 'sha256_mismatch' for e in errors),
+              'missing_files': sorted(actual_paths ^ manifest_paths),
+              'errors': errors,
+              'manifest_sha256': hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+          }
+          Path('gate001_independent_integrity.json').write_text(
+              json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+          if result['status'] != 'PASS':
+              raise SystemExit(1)
+          PY
+
       - name: Commit snapshot
         run: |
           set -euo pipefail
@@ -58,3 +111,10 @@ jobs:
           # This workflow is the execution evidence source for GATE-001. The
           # immutable snapshot and its manifest are committed only after the
           # validation step above succeeds.
+
+      - name: Upload independent integrity evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate001-independent-integrity
+          path: gate001_independent_integrity.json
+          if-no-files-found: error
