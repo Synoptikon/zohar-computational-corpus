@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+pythonpath = ["."]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/zohar_corpus"]
