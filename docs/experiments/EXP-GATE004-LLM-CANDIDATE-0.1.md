@@ -3,7 +3,7 @@
 ## 1. Experiment identity
 
 - EXP-ID: `EXP-GATE004-LLM-CANDIDATE-0.1`
-- Status: `PLANNED`
+- Status: `INCONCLUSIVE`
 - Parent gate: `GATE-004`
 - Protocol: `ANNOTATION-PILOT-0.1`
 - Schema: `ANNOTATION-SCHEMA-0.1`
@@ -41,13 +41,13 @@ This experiment does not provide evidence of inter-annotator agreement and must 
 
 **Data required:** the frozen 30 SID package, schema, vocabulary, guidelines, LLM model/version, prompt/context, raw outputs, normalized candidate JSON, and human review records.
 
-**Model:** deterministic/reproducible candidate-generation procedure using a declared LLM configuration.
+**Model:** LLM-assisted candidate-generation procedure using a declared model and recorded prompt/context.
 
 **Metric:** structural validity rate = valid candidate records / candidate records submitted to validation.
 
 **Baseline:** zero automatic promotion to `ACCEPTED`; all LLM output starts as `source=llm`, `validation_status=CANDIDATE`.
 
-**Falsification criterion:** the hypothesis is not supported if reproducible candidate generation cannot produce structurally valid records under the frozen schema, or if provenance/status cannot be preserved.
+**Falsification criterion:** the hypothesis is not supported if candidate generation cannot produce structurally valid records under the frozen schema, or if provenance/status cannot be preserved.
 
 ## 4. Model specification
 
@@ -57,28 +57,43 @@ This experiment does not provide evidence of inter-annotator agreement and must 
 - Transformation: LLM-assisted extraction constrained to `ENTITY`, `RELATION`, and `FEATURE`.
 - Output: schema-valid candidate annotation records plus provenance.
 - Assumptions: source text is unchanged; vocabulary and guidelines are frozen; LLM output is not ground truth.
-- Parameters: model identifier/version, prompt, context, temperature and other generation parameters must be recorded for any confirmation run.
 - Controls: abstention, schema validation, EID uniqueness, SID membership, provenance/status checks.
 - Limitation: candidate generation does not establish agreement, semantic equivalence, historical validity, or theological validity.
 
-## 5. Current B artifact classification
+## 5. Execution E001
 
-The existing `annotator_b.json` is reclassified for this experiment as:
+Execution record: `data/experiments/EXP-GATE004-LLM-CANDIDATE-0.1/execution_001.md`.
+
+Observed output:
+- 30 SID records processed;
+- 28 abstentions;
+- 5 candidate `ENTITY` records;
+- 0 `RELATION`;
+- 0 `FEATURE`;
+- all candidates retained `source=llm` and `validation_status=CANDIDATE`.
+
+Structural validity rate: `1.0` for submitted candidate records (5/5).
+
+The structural prediction is supported in E001. However, the experiment remains `INCONCLUSIVE` for the stronger reproducibility criterion because the ChatGPT runtime does not expose complete generation parameters such as temperature, top_p, and seed. Those fields are explicitly recorded as unavailable rather than inferred.
+
+## 6. Current B artifact classification
+
+The existing `annotator_b.json` is classified for this experiment as:
 
 - role: `LLM_CANDIDATE_GENERATOR`
 - source: `llm`
 - validation status: `CANDIDATE`
 - independence class: `NOT_INDEPENDENT_HUMAN_ANNOTATOR`
 
-The existing B artifact must not be used as the second human annotation in `GATE-004` agreement calculations.
+The B artifact must not be used as the second human annotation in `GATE-004` agreement calculations.
 
-## 6. Human review
+## 7. Human review
 
 A later human-review stage may transform individual candidates from `CANDIDATE` to a reviewed status only after explicit human inspection. Human review must preserve provenance and record the reviewer. A reviewed LLM candidate remains distinguishable from an independently originated human annotation.
 
-## 7. Separation from GATE-004 agreement
+## 8. Separation from GATE-004 agreement
 
-The original pilot protocol requires at least two independent annotators to code the same frozen set without seeing each other's decisions. LLM output is explicitly excluded from serving as an independent human annotation unless a separate experiment specifies that comparison.
+The original pilot protocol requires at least two independent annotators to code the same frozen set without seeing each other's decisions. LLM output is excluded from serving as an independent human annotation.
 
 Therefore:
 
@@ -86,23 +101,12 @@ Therefore:
 
 `human A vs LLM candidate B` -> this experiment only; not human inter-annotator agreement
 
-## 8. Required evidence for completion
+## 9. Required evidence
 
-A future execution must archive:
+E001 records the model identifier/date, prompt, frozen input identity, normalized output, validation result, provenance/status and execution limitations. A fully reproducible API-backed confirmation remains pending because complete generation parameters are not exposed by the current runtime.
 
-1. exact model identifier/version;
-2. prompt and system/developer context used for candidate generation;
-3. generation parameters;
-4. frozen input package identity and hash;
-5. raw LLM output;
-6. normalized `annotator_b.json` candidate output;
-7. structural validation report;
-8. candidate-level provenance;
-9. human review results, if performed;
-10. reproducible run identifier.
+## 10. Status
 
-## 9. Status
+`INCONCLUSIVE`
 
-`PLANNED`
-
-This document formalizes the separation. It does not retroactively convert the existing B candidates into validated evidence and does not advance `GATE-004` to `VALIDATED`.
+The experiment has an executed structural result but does not satisfy the stronger reproducibility requirement. It does not advance `GATE-004` to `VALIDATED`.
