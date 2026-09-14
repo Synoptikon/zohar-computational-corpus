@@ -35,107 +35,104 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install project and test dependencies
         run: |
           python -m pip install --upgrade pip pytest
           python -m pip install -e .
-
       - name: Test annotation implementation
         run: python -m pytest
-
       - name: Acquire RAW snapshot
         run: |
-          python scripts/acquire_wikisource_zohar.py \
-            --output data/raw/zohar/wikisource
-
+          python scripts/acquire_wikisource_zohar.py --output data/raw/zohar/wikisource
       - name: Validate RAW snapshot
         run: |
-          python scripts/validate_corpus_snapshot.py \
-            data/raw/zohar/wikisource
-
+          python scripts/validate_corpus_snapshot.py data/raw/zohar/wikisource
       - name: Normalize corpus
         run: python scripts/normalize_corpus.py
-
       - name: Audit normalized offsets
         run: |
-          python scripts/audit_normalized_offsets.py \
-            --input-dir data/normalized/zohar/wikisource \
-            --output data/analysis/normalized_offsets_audit.json
-
+          python scripts/audit_normalized_offsets.py --input-dir data/normalized/zohar/wikisource --output data/analysis/normalized_offsets_audit.json
       - name: Segment corpus with authoritative CID
         run: |
-          python scripts/segment_corpus.py \
-            --input-dir data/normalized/zohar/wikisource \
-            --output-dir data/segments/zohar/wikisource \
-            --source-manifest data/sources/zohar_primary_wikisource.json \
-            --repo-root .
-
+          python scripts/segment_corpus.py --input-dir data/normalized/zohar/wikisource --output-dir data/segments/zohar/wikisource --source-manifest data/sources/zohar_primary_wikisource.json --repo-root .
       - name: Audit SID segmentation
         run: |
-          python scripts/audit_segments.py \
-            --input-dir data/segments/zohar/wikisource \
-            --output data/analysis/segment_audit.json
-
+          python scripts/audit_segments.py --input-dir data/segments/zohar/wikisource --output data/analysis/segment_audit.json
       - name: Select deterministic 30-SID pilot
         run: |
-          python scripts/select_annotation_pilot.py \
-            --input-dir data/segments/zohar/wikisource \
-            --output data/analysis/annotation_pilot.json \
-            --sample-size 30
-
+          python scripts/select_annotation_pilot.py --input-dir data/segments/zohar/wikisource --output data/analysis/annotation_pilot.json --sample-size 30
       - name: Initialize independent annotation shells
         run: |
-          python scripts/init_annotation_pilot.py \
-            --pilot data/analysis/annotation_pilot.json \
-            --output-dir data/analysis/annotation_pilot_annotations
-
+          python scripts/init_annotation_pilot.py --pilot data/analysis/annotation_pilot.json --output-dir data/analysis/annotation_pilot_annotations
       - name: Validate pilot pair integrity
         run: |
-          python scripts/validate_annotation_pilot_pair.py \
-            --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
-            --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
-            --output data/analysis/annotation_pilot_pair_validation.json
-
+          python scripts/validate_annotation_pilot_pair.py --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json --output data/analysis/annotation_pilot_pair_validation.json
+      - name: Build independent annotation package
+        run: |
+          python - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          root = Path('.')
+          pilot = json.loads(Path('data/analysis/annotation_pilot.json').read_text(encoding='utf-8'))
+          package = root / 'data/analysis/gate004_annotation_package'
+          segments_out = package / 'segments'
+          segments_out.mkdir(parents=True, exist_ok=True)
+          shutil.copy2('data/analysis/annotation_pilot_annotations/annotator_a.json', package / 'annotator_a.json')
+          shutil.copy2('data/analysis/annotation_pilot_annotations/annotator_b.json', package / 'annotator_b.json')
+          for index, selected in enumerate(pilot['segments'], start=1):
+              source = root / selected['source_normalized_path'].replace('data/normalized/', 'data/segments/')
+              document = json.loads(source.read_text(encoding='utf-8'))
+              matches = [segment for segment in document['segments'] if segment['sid'] == selected['sid']]
+              if len(matches) != 1:
+                  raise SystemExit(f"Expected exactly one segment for {selected['sid']}, found {len(matches)}")
+              (segments_out / f'{index:02d}.json').write_text(json.dumps(matches[0], ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          manifest = {
+              'package_version': 'GATE-004-ANNOTATION-PACKAGE-0.1',
+              'status': 'READY_FOR_INDEPENDENT_ANNOTATION',
+              'cid': pilot['cid'],
+              'pilot_version': pilot['pilot_version'],
+              'selector_version': pilot['selector_version'],
+              'guidelines_version': pilot['guidelines_version'],
+              'vocabulary_version': pilot['vocabulary_version'],
+              'population_size': pilot['population_size'],
+              'sample_size': pilot['sample_size'],
+              'population_sid_sha256': pilot['population_sid_sha256'],
+              'selected_sid_sha256': pilot['selected_sid_sha256'],
+              'selection_method': pilot['selection_method'],
+              'source_workflow_run_id': int(os.environ['GITHUB_RUN_ID']),
+              'annotation_files': {'annotator_a': 'annotator_a.json', 'annotator_b': 'annotator_b.json'},
+              'segment_files': 'segments/*.json',
+              'independence_rule': 'Annotator A and Annotator B must annotate independently without seeing the other annotator decisions.',
+              'llm_rule': 'LLM output is CANDIDATE annotation only and is not independent ground truth.'
+          }
+          (package / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          PY
       - name: Emit evidence summary
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-
           pilot = json.loads(Path('data/analysis/annotation_pilot.json').read_text(encoding='utf-8'))
           pair = json.loads(Path('data/analysis/annotation_pilot_pair_validation.json').read_text(encoding='utf-8'))
           segment = json.loads(Path('data/analysis/segment_audit.json').read_text(encoding='utf-8'))
           normalized = json.loads(Path('data/analysis/normalized_offsets_audit.json').read_text(encoding='utf-8'))
-
           evidence = {
               'evidence_version': 'GATE-004-PILOT-EVIDENCE-0.3',
               'pilot_status': 'EXECUTED',
               'annotation_status': 'NOT_YET_ANNOTATED',
-              'pilot': {
-                  'cid': pilot['cid'],
-                  'population_size': pilot['population_size'],
-                  'sample_size': pilot['sample_size'],
-                  'population_sid_sha256': pilot['population_sid_sha256'],
-                  'selected_sid_sha256': pilot['selected_sid_sha256'],
-              },
+              'pilot': {'cid': pilot['cid'], 'population_size': pilot['population_size'], 'sample_size': pilot['sample_size'], 'population_sid_sha256': pilot['population_sid_sha256'], 'selected_sid_sha256': pilot['selected_sid_sha256']},
               'normalized_audit_status': normalized['status'],
               'segment_audit_status': segment['status'],
               'pair_validation': pair,
               'gate_004_status': 'IN_PROGRESS',
               'interpretation': 'This artifact proves reproducible pilot selection and pair integrity on the acquired corpus. It does not constitute inter-annotator agreement evidence because both annotation shells are intentionally UNANNOTATED.'
           }
-          Path('data/analysis/gate004_pilot_evidence.json').write_text(
-              json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
-              encoding='utf-8',
-          )
+          Path('data/analysis/gate004_pilot_evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
           print(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True))
           PY
-
       - name: Upload GATE-004 pilot evidence
         uses: actions/upload-artifact@v4
         with:
@@ -148,4 +145,10 @@ jobs:
             data/analysis/segment_audit.json
             data/analysis/annotation_pilot_annotations/annotator_a.json
             data/analysis/annotation_pilot_annotations/annotator_b.json
+          if-no-files-found: error
+      - name: Upload independent annotation package
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate004-annotation-package
+          path: data/analysis/gate004_annotation_package
           if-no-files-found: error
