@@ -10,6 +10,9 @@ from pathlib import Path
 PILOT_VERSION = "ANNOTATION-PILOT-0.1"
 SELECTION_METHOD = "SHA256_SID_ASCENDING"
 DEFAULT_SAMPLE_SIZE = 30
+SELECTOR_VERSION = "SELECT-ANNOTATION-PILOT-0.2"
+VOCABULARY_VERSION = "ANNOTATION-VOCABULARY-0.1"
+GUIDELINES_VERSION = "ANNOTATION-GUIDELINES-0.1"
 
 
 def _error(code: str, message: str, **context: object) -> ValueError:
@@ -47,6 +50,11 @@ def load_sids(input_dir: Path) -> list[dict[str, object]]:
     return records
 
 
+def sid_population_digest(sids: list[str]) -> str:
+    payload = "\n".join(sorted(sids)).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def select_pilot(records: list[dict[str, object]], sample_size: int) -> list[dict[str, object]]:
     if sample_size < 1:
         raise _error("INVALID_SAMPLE_SIZE", "sample size must be >= 1", sample_size=sample_size)
@@ -76,11 +84,18 @@ def build_pilot(input_dir: Path, sample_size: int) -> dict[str, object]:
     cids = {record["cid"] for record in selected if isinstance(record.get("cid"), str)}
     if len(cids) > 1:
         raise _error("MULTIPLE_CIDS", "pilot selection spans multiple CIDs", cids=sorted(cids))
+    population_sids = [str(record["sid"]) for record in records]
+    selected_sids = [str(record["sid"]) for record in selected]
     return {
         "pilot_version": PILOT_VERSION,
+        "selector_version": SELECTOR_VERSION,
         "selection_method": SELECTION_METHOD,
+        "vocabulary_version": VOCABULARY_VERSION,
+        "guidelines_version": GUIDELINES_VERSION,
         "sample_size": sample_size,
         "population_size": len(records),
+        "population_sid_sha256": sid_population_digest(population_sids),
+        "selected_sid_sha256": sid_population_digest(selected_sids),
         "cid": next(iter(cids), None),
         "segments": selected,
     }
