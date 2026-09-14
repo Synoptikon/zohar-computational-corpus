@@ -29,47 +29,73 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install project and test dependencies
         run: |
           python -m pip install --upgrade pip pytest
           python -m pip install -e .
-
       - name: Run tests
         run: python -m pytest
-
+      - name: Check annotation readiness
+        id: readiness
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          ready = True
+          reasons = []
+          for name in ('annotator_a.json', 'annotator_b.json'):
+              path = Path('data/analysis/annotation_pilot_annotations') / name
+              document = json.loads(path.read_text(encoding='utf-8'))
+              if document.get('status') == 'UNANNOTATED':
+                  ready = False
+                  reasons.append(f'{name}:UNANNOTATED')
+              if not isinstance(document.get('segments'), list) or len(document['segments']) != 30:
+                  ready = False
+                  reasons.append(f'{name}:INVALID_OR_MISSING_30_SEGMENTS')
+          Path('data/analysis').mkdir(parents=True, exist_ok=True)
+          report = {'status': 'READY' if ready else 'BLOCKED', 'reasons': reasons}
+          Path('data/analysis/annotation_readiness.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as out:
+              out.write(f"ready={'true' if ready else 'false'}\n")
+          print(json.dumps(report, indent=2))
+          PY
+      - name: Emit blocked evidence
+        if: steps.readiness.outputs.ready != 'true'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          readiness = json.loads(Path('data/analysis/annotation_readiness.json').read_text(encoding='utf-8'))
+          evidence = {
+              'evidence_version': 'GATE-004-ANNOTATION-COMPARISON-0.1',
+              'gate_004_status': 'BLOCKED',
+              'reason': 'Independent annotation documents are not yet populated.',
+              'readiness': readiness,
+              'interpretation': 'No agreement or disagreement metric is computed until both independent annotation documents are populated and structurally valid.'
+          }
+          Path('data/analysis/gate004_annotation_comparison_evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          PY
       - name: Validate annotation documents
+        if: steps.readiness.outputs.ready == 'true'
         run: |
-          python scripts/validate_annotations.py \
-            --input-dir data/analysis/annotation_pilot_annotations \
-            --output data/analysis/annotation_validation.json
-
+          python scripts/validate_annotations.py --input-dir data/analysis/annotation_pilot_annotations --output data/analysis/annotation_validation.json
       - name: Validate pilot pair integrity
+        if: steps.readiness.outputs.ready == 'true'
         run: |
-          python scripts/validate_annotation_pilot_pair.py \
-            --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
-            --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
-            --output data/analysis/annotation_pilot_pair_validation.json
-
+          python scripts/validate_annotation_pilot_pair.py --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json --output data/analysis/annotation_pilot_pair_validation.json
       - name: Compare independent annotations
+        if: steps.readiness.outputs.ready == 'true'
         run: |
-          python scripts/compare_annotation_pilots.py \
-            --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
-            --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
-            --output data/analysis/annotation_agreement.json
-
+          python scripts/compare_annotation_pilots.py --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json --output data/analysis/annotation_agreement.json
       - name: Classify disagreements
+        if: steps.readiness.outputs.ready == 'true'
         run: |
-          python scripts/classify_annotation_disagreements.py \
-            --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
-            --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
-            --output data/analysis/annotation_disagreements.json
-
+          python scripts/classify_annotation_disagreements.py --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json --output data/analysis/annotation_disagreements.json
       - name: Emit GATE-004 comparison evidence
+        if: steps.readiness.outputs.ready == 'true'
         run: |
           python - <<'PY'
           import json
@@ -78,7 +104,6 @@ jobs:
           disagreements = json.loads(Path('data/analysis/annotation_disagreements.json').read_text(encoding='utf-8'))
           validation = json.loads(Path('data/analysis/annotation_validation.json').read_text(encoding='utf-8'))
           pair = json.loads(Path('data/analysis/annotation_pilot_pair_validation.json').read_text(encoding='utf-8'))
-          pilot = json.loads(Path('data/analysis/annotation_pilot.json').read_text(encoding='utf-8')) if Path('data/analysis/annotation_pilot.json').exists() else {}
           evidence = {
               'evidence_version': 'GATE-004-ANNOTATION-COMPARISON-0.1',
               'gate_004_status': 'IN_PROGRESS' if disagreements.get('status') != 'PASS' else 'CANDIDATE_FOR_REVIEW',
@@ -86,25 +111,20 @@ jobs:
               'pair_validation': pair,
               'agreement': agreement,
               'disagreements': disagreements,
-              'pilot_identity': {
-                  'cid': pilot.get('cid'),
-                  'sample_size': pilot.get('sample_size'),
-                  'selected_sid_sha256': pilot.get('selected_sid_sha256')
-              },
               'interpretation': 'Exact annotation agreement is measured over the frozen SID set. Agreement does not establish semantic equivalence, historical validity, or causal interpretation.'
           }
           Path('data/analysis/gate004_annotation_comparison_evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
-          print(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True))
           PY
-
       - name: Upload comparison evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gate004-annotation-comparison
           path: |
+            data/analysis/annotation_readiness.json
             data/analysis/annotation_validation.json
             data/analysis/annotation_pilot_pair_validation.json
             data/analysis/annotation_agreement.json
             data/analysis/annotation_disagreements.json
             data/analysis/gate004_annotation_comparison_evidence.json
-          if-no-files-found: error
+          if-no-files-found: warn
