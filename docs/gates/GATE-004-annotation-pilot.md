@@ -26,11 +26,47 @@ Selection method:
 
 `SHA256_SID_ASCENDING`
 
+Pilot contract:
+
+`ANNOTATION-PILOT-0.1`
+
+Selector implementation version:
+
+`SELECT-ANNOTATION-PILOT-0.2`
+
 Default sample size:
 
 `30`
 
-The resulting artifact must record the complete selected SID set, population size, CID, sample size, selector version, and per-SID selection hash.
+The resulting artifact records:
+
+- complete selected SID set;
+- population size;
+- CID;
+- sample size;
+- selector version;
+- vocabulary version;
+- guidelines version;
+- per-SID selection hash;
+- SHA-256 digest of the complete population SID set;
+- SHA-256 digest of the selected SID set.
+
+The population and selected-set digests make corpus drift detectable before annotation comparison. Re-running the selector against a changed SID population produces different freeze evidence rather than silently reusing an obsolete pilot.
+
+## Execution status
+
+The selector implementation and its fingerprint tests are committed. The real 7,850-SID pilot artifact has **not yet been executed in the project working tree** and therefore no frozen pilot evidence is claimed here.
+
+Expected execution:
+
+```bash
+python scripts/select_annotation_pilot.py \
+  --input-dir data/segmented/zohar/wikisource \
+  --output data/analysis/annotation_pilot.json \
+  --sample-size 30
+```
+
+The resulting artifact must be preserved as the frozen pilot input before either annotator begins coding.
 
 ## Validation requirements
 
@@ -48,4 +84,4 @@ LLM output is not independent human ground truth and remains `CANDIDATE` until r
 
 ## Current limitation
 
-The selector and protocol are implemented, but the pilot has not yet been executed in the project working tree and no independent annotation agreement result has been produced. Therefore the gate remains `IN_PROGRESS`.
+The selector and protocol are implemented, including corpus-drift fingerprints, but the pilot has not yet been executed in the project working tree and no independent annotation agreement result has been produced. Therefore the gate remains `IN_PROGRESS`.
