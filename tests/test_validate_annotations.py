@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.validate_annotations import validate_record
+from scripts.validate_annotations import validate_directory, validate_record
 
 
 def test_valid_human_annotation() -> None:
@@ -65,3 +65,44 @@ def test_schema_version_is_required() -> None:
     }
     errors = validate_record(record, 0)
     assert any(error["type"] == "INVALID_SCHEMA_VERSION" for error in errors)
+
+
+def test_fixture_directory_validates_with_records(tmp_path: Path) -> None:
+    fixture_dir = tmp_path / "annotations"
+    fixture_dir.mkdir()
+    fixture = {
+        "schema_version": "ANNOTATION-SCHEMA-0.1",
+        "annotations": [
+            {
+                "eid": "EID:SID:0001:0001",
+                "sid": "SID:CID-ZOHAR-WIKISOURCE-MANTUA:0001:0",
+                "annotation_type": "example_type",
+                "value": "fixture",
+                "source": "human",
+                "annotator": "human:fixture",
+                "annotation_version": "ANNOTATION-SCHEMA-0.1",
+                "validation_status": "REVIEWED",
+            }
+        ],
+    }
+    (fixture_dir / "valid.json").write_text(json.dumps(fixture), encoding="utf-8")
+
+    report = validate_directory(fixture_dir, tmp_path / "audit.json")
+
+    assert report["status"] == "PASS"
+    assert report["total_files"] == 1
+    assert report["total_records"] == 1
+    assert report["total_errors"] == 0
+
+
+def test_empty_annotation_directory_is_not_a_validation_pass(tmp_path: Path) -> None:
+    fixture_dir = tmp_path / "empty"
+    fixture_dir.mkdir()
+
+    report = validate_directory(fixture_dir, tmp_path / "audit.json")
+
+    assert report["status"] == "FAIL"
+    assert report["total_files"] == 0
+    assert report["total_records"] == 0
+    assert report["total_errors"] >= 1
+    assert any(error["type"] == "NO_ANNOTATION_FILES" for error in report["errors"])
