@@ -122,9 +122,13 @@ No disagreement category is treated as semantic error automatically. Classificat
 
 ## Execution status
 
-The selector implementation, fingerprint tests, independent-shell generator, pair-integrity validator, agreement comparator, and disagreement classifier are committed. The real 7,850-SID pilot artifact has **not yet been executed in the project working tree** and therefore no frozen pilot evidence or agreement result is claimed here.
+The selector implementation, fingerprint tests, independent-shell generator, pair-integrity validator, agreement comparator, and disagreement classifier are committed.
 
-Expected execution:
+A reproducible CI execution of the pilot pipeline has now been completed on HEAD `fc211853914877a8fd82b9d71c542724860d7a3c` (GitHub Actions run `34831888754`). The run completed successfully and produced the `gate004-pilot-evidence` artifact. The artifact contains the deterministic 30-SID pilot and two **unannotated** shells; pair-integrity validation passes, but `annotation_status` remains `NOT_YET_ANNOTATED` and `gate_004_status` remains `IN_PROGRESS`.
+
+This CI artifact is execution evidence, not evidence of inter-annotator agreement. The project working tree still does not contain completed independent A/B annotations or an agreement result.
+
+## Expected execution
 
 ```bash
 python scripts/select_annotation_pilot.py \
@@ -175,4 +179,4 @@ LLM output is not independent human ground truth and remains `CANDIDATE` until r
 
 ## Current limitation
 
-The selector, integrity fingerprints, independent shells, pair-integrity validator, agreement comparator, and disagreement classifier are implemented, but the real pilot has not yet been executed in the project working tree and no independent annotation agreement result has been produced. Therefore the gate remains `IN_PROGRESS`.
+The reproducible CI pilot pipeline is implemented and has produced a frozen 30-SID execution artifact, but the artifact's A/B records are still unannotated. No independent annotation agreement result has been produced. Therefore the gate remains `IN_PROGRESS`.
