@@ -82,7 +82,7 @@ jobs:
               },
           }
           Path('artifacts/reproducibility_summary.json').write_text(
-              json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + '\\n'
+              json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + '\n'
           )
           print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
           PY
