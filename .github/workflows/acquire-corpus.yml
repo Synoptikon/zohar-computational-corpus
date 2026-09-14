@@ -48,3 +48,7 @@ jobs:
 
           git commit -m 'data: add verified Wikisource RAW snapshot'
           git push origin HEAD:main
+
+          # This workflow is the execution evidence source for GATE-001. The
+          # immutable snapshot and its manifest are committed only after the
+          # validation step above succeeds.
