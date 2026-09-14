@@ -1,0 +1,99 @@
+name: normalize-segment
+
+on:
+  push:
+    paths:
+      - '.github/workflows/normalize-segment.yml'
+      - 'scripts/normalize_corpus.py'
+      - 'scripts/audit_normalized_offsets.py'
+      - 'scripts/segment_corpus.py'
+      - 'scripts/audit_segments.py'
+      - 'src/**'
+      - 'data/raw/zohar/wikisource/**'
+      - 'data/sources/zohar_primary_wikisource.json'
+      - 'data/analysis/segmentation_rules_v0.1.md'
+      - 'data/analysis/segment_contract_v0.1.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  normalize-segment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project
+        run: python -m pip install --upgrade pip && python -m pip install -e .
+
+      - name: Test implementation
+        run: python -m pytest
+
+      - name: Normalize corpus
+        run: python scripts/normalize_corpus.py
+
+      - name: Audit normalized offsets
+        run: >-
+          python scripts/audit_normalized_offsets.py
+          --input-dir data/normalized/zohar/wikisource
+          --output artifacts/audit_normalized_offsets.json
+
+      - name: Segment corpus
+        run: >-
+          python scripts/segment_corpus.py
+          --input-dir data/normalized/zohar/wikisource
+          --output-dir data/segments/zohar/wikisource
+          --source-manifest data/sources/zohar_primary_wikisource.json
+          --repo-root .
+
+      - name: Audit SID segments
+        run: >-
+          python scripts/audit_segments.py
+          --input-dir data/segments/zohar/wikisource
+          --output artifacts/audit_segments.json
+
+      - name: Emit reproducibility summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          normalized = json.loads(Path('artifacts/audit_normalized_offsets.json').read_text())
+          segments = json.loads(Path('artifacts/audit_segments.json').read_text())
+          summary = {
+              'pipeline': 'normalize-segment',
+              'normalization': {
+                  'status': normalized['status'],
+                  'files': normalized['total_files'],
+                  'records': normalized['total_records'],
+                  'errors': normalized['total_errors'],
+                  'warnings': normalized['total_warnings'],
+              },
+              'segmentation': {
+                  'status': segments['status'],
+                  'files': segments['total_files'],
+                  'segments': segments['total_segments'],
+                  'errors': segments['total_errors'],
+              },
+          }
+          Path('artifacts/reproducibility_summary.json').write_text(
+              json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True) + '\\n'
+          )
+          print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload reproducibility artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zohar-normalize-segment-${{ github.sha }}
+          path: |
+            artifacts/
+            data/normalized/zohar/wikisource/normalized_manifest.json
+            data/segments/zohar/wikisource/
+          if-no-files-found: error
+          retention-days: 30
