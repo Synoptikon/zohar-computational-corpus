@@ -1,0 +1,35 @@
+{
+  "schema_version": "ANNOTATION-SCHEMA-0.1",
+  "annotations": [
+    {
+      "eid": "EID:SID:0001:0001",
+      "sid": "SID:CID-ZOHAR-WIKISOURCE-MANTUA:0001:0",
+      "annotation_type": "example_type",
+      "value": "fixture-human",
+      "source": "human",
+      "annotator": "human:fixture",
+      "annotation_version": "ANNOTATION-SCHEMA-0.1",
+      "validation_status": "REVIEWED"
+    },
+    {
+      "eid": "EID:SID:0001:0002",
+      "sid": "SID:CID-ZOHAR-WIKISOURCE-MANTUA:0001:0",
+      "annotation_type": "example_type",
+      "value": "fixture-rule",
+      "source": "rule",
+      "annotator": "rule:fixture@0.1",
+      "annotation_version": "ANNOTATION-SCHEMA-0.1",
+      "validation_status": "CANDIDATE"
+    },
+    {
+      "eid": "EID:SID:0001:0003",
+      "sid": "SID:CID-ZOHAR-WIKISOURCE-MANTUA:0001:0",
+      "annotation_type": "example_type",
+      "value": "fixture-llm",
+      "source": "llm",
+      "annotator": "model:fixture@0.1",
+      "annotation_version": "ANNOTATION-SCHEMA-0.1",
+      "validation_status": "CANDIDATE"
+    }
+  ]
+}
