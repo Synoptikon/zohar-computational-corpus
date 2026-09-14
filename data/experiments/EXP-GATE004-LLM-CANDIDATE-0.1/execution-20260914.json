@@ -1,0 +1,44 @@
+{
+  "exp_id": "EXP-GATE004-LLM-CANDIDATE-0.1",
+  "execution_id": "EXP-GATE004-LLM-CANDIDATE-0.1-EXEC-20260914-01",
+  "status": "BLOCKED",
+  "date": "2026-09-14",
+  "model": {
+    "identifier": "GPT-5.6 Luna",
+    "version": "GPT-5.6 Luna",
+    "runtime_parameters": "NOT_EXPOSED_BY_RUNTIME"
+  },
+  "input": {
+    "cid": "CID-ZOHAR-WIKISOURCE-MANTUA",
+    "sample_size": 30,
+    "selected_sid_sha256": "715dc83c2336857c4a3fe07844033305f4a7ee6f86a2fea4e47d5c236d0bd05d",
+    "source_workflow_run_id": "34839232374",
+    "source_artifact": "gate004-annotation-package",
+    "source_artifact_digest": "sha256:a39f6bb3e7a7dce3c509ff84963c1e1c11c8b2cb16a1989caa9b12230c4c0ab8"
+  },
+  "prompt": {
+    "task": "Generate annotation candidates for the frozen 30-SID GATE-004 pilot using only ANNOTATION-SCHEMA-0.1, ANNOTATION-VOCABULARY-0.1 and ANNOTATION-GUIDELINES-0.1. Use only ENTITY, RELATION and FEATURE when directly supported by the SID text. Abstain when evidence is insufficient. Preserve SID membership, EID uniqueness, provenance source=llm and validation_status=CANDIDATE. Do not infer historical, theological or semantic claims not operationalized by the frozen vocabulary/guidelines.",
+    "system_or_developer_context": "NOT_PERSISTED: hidden runtime instructions are not copied into repository artifacts",
+    "generation_parameters": "NOT_EXPOSED_BY_RUNTIME"
+  },
+  "output": {
+    "raw_llm_output": "NOT_GENERATED_IN_THIS_EXECUTION",
+    "normalized_output": "NOT_GENERATED_IN_THIS_EXECUTION",
+    "validation_report": "NOT_GENERATED_IN_THIS_EXECUTION"
+  },
+  "blocker": {
+    "type": "INPUT_ARTIFACT_ACCESS",
+    "evidence": "The current GitHub connector exposes repository text resources but does not expose binary GitHub Actions artifact download bytes. The frozen artifact identity is known, but the 30 SID texts cannot be re-mounted into the model execution from the connector in this run.",
+    "required_resolution": "Make the frozen gate004-annotation-package bytes available to the execution environment, or provide a repository-committed text representation whose hash is linked to the frozen artifact digest."
+  },
+  "validation": {
+    "hypothesis_status": "INCONCLUSIVE",
+    "structural_validity_rate": null,
+    "automatic_promotion_to_accepted": false,
+    "human_agreement_evidence": false
+  },
+  "separation": {
+    "gate004_human_agreement": "UNTOUCHED",
+    "llm_candidate_experiment": "SEPARATE"
+  }
+}
