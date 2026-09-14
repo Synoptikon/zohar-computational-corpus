@@ -8,6 +8,7 @@ from pathlib import Path
 
 SEGMENTATION_VERSION = "SEGMENTATION-RULES-0.1"
 OUTPUT_SCHEMA_VERSION = "SID-CONTRACT-0.1"
+DEFAULT_SOURCE_MANIFEST = "data/sources/zohar_primary_wikisource.json"
 
 REQUIRED_RECORD_FIELDS = {
     "sequence",
@@ -72,6 +73,31 @@ def _validate_record(record: object, index: int, previous_sequence: int | None) 
         )
 
     return sequence
+
+
+def load_manifest_cid(manifest_path: Path) -> str:
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise _error("SOURCE_MANIFEST_INVALID", "cannot read source manifest", path=str(manifest_path)) from exc
+
+    cid = manifest.get("cid") if isinstance(manifest, dict) else None
+    if not isinstance(cid, str) or not cid.strip():
+        raise _error("SOURCE_MANIFEST_CID_MISSING", "source manifest must contain a non-empty cid", path=str(manifest_path))
+    return cid
+
+
+def resolve_cid(*, cid: str | None, source_manifest: Path) -> str:
+    manifest_cid = load_manifest_cid(source_manifest)
+    if cid is not None and cid != manifest_cid:
+        raise _error(
+            "CID_MISMATCH",
+            "explicit cid does not match the authoritative source manifest",
+            explicit_cid=cid,
+            manifest_cid=manifest_cid,
+            source_manifest=str(source_manifest),
+        )
+    return manifest_cid
 
 
 def segment_document(
@@ -179,16 +205,19 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Create deterministic SID segments from normalized Zohar JSON.")
     parser.add_argument("--input-dir", required=True)
     parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--cid", required=True)
+    parser.add_argument("--cid", default=None)
+    parser.add_argument("--source-manifest", default=DEFAULT_SOURCE_MANIFEST)
     parser.add_argument("--repo-root", default=".")
     args = parser.parse_args()
 
+    repo_root = Path(args.repo_root)
     try:
+        cid = resolve_cid(cid=args.cid, source_manifest=repo_root / args.source_manifest)
         result = segment_directory(
             Path(args.input_dir),
             Path(args.output_dir),
-            cid=args.cid,
-            repo_root=Path(args.repo_root),
+            cid=cid,
+            repo_root=repo_root,
         )
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
