@@ -1,0 +1,76 @@
+name: gate003-annotation-schema
+
+on:
+  push:
+    paths:
+      - '.github/workflows/gate003-annotation-schema.yml'
+      - 'scripts/validate_annotations.py'
+      - 'tests/test_validate_annotations.py'
+      - 'tests/fixtures/annotations/valid_annotations.json'
+      - 'data/analysis/annotation_schema_v0.1.md'
+  pull_request:
+    paths:
+      - '.github/workflows/gate003-annotation-schema.yml'
+      - 'scripts/validate_annotations.py'
+      - 'tests/test_validate_annotations.py'
+      - 'tests/fixtures/annotations/valid_annotations.json'
+      - 'data/analysis/annotation_schema_v0.1.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate003:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test dependency and project
+        run: |
+          python -m pip install --upgrade pip pytest
+          python -m pip install -e .
+      - name: Test annotation implementation
+        run: python -m pytest tests/test_validate_annotations.py
+      - name: Validate non-empty fixture
+        run: |
+          mkdir -p artifacts
+          python scripts/validate_annotations.py \
+            --input-dir tests/fixtures/annotations \
+            --output artifacts/annotation_validation.json
+      - name: Emit GATE-003 execution manifest
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          
+          report_path = Path('artifacts/annotation_validation.json')
+          report = json.loads(report_path.read_text(encoding='utf-8'))
+          digest = hashlib.sha256(report_path.read_bytes()).hexdigest()
+          manifest = {
+              'gate': 'GATE-003',
+              'status': report['status'],
+              'validation_version': report['validation_version'],
+              'commit': '${{ github.sha }}',
+              'workflow': '${{ github.workflow }}',
+              'run_id': '${{ github.run_id }}',
+              'validation_artifact': 'artifacts/annotation_validation.json',
+              'evidence_sha256': digest,
+          }
+          Path('artifacts/gate003_execution_manifest.json').write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True))
+          PY
+      - name: Upload GATE-003 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zohar-gate003-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
