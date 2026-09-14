@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1",
+  "status": "FIXTURE_DEFINED_NOT_EXECUTED",
+  "source_manifest": "data/raw/zohar/wikisource/snapshot_manifest.json",
+  "endpoint": "https://he.wikisource.org/w/api.php",
+  "sequences": [1, 2, 3, 4, 5],
+  "rationale": [
+    "sequence 1: standalone named work",
+    "sequence 2: introductory text",
+    "sequence 3: Zohar part index/navigation",
+    "sequence 4: transclusion-bearing page",
+    "sequence 5: transclusion-bearing page"
+  ],
+  "required_checks": [
+    "RAW SHA-256 matches snapshot manifest",
+    "E1 API expansion succeeds",
+    "expanded artifact is non-empty where lexical content is expected",
+    "unresolved templates are counted and surfaced",
+    "template dependencies are enumerated",
+    "dependency revision metadata is recorded when available",
+    "E1 artifact SHA-256 is recorded",
+    "rerun produces identical bytes only under identical dependency state"
+  ],
+  "expected_status": "TO_BE_MEASURED"
+}
