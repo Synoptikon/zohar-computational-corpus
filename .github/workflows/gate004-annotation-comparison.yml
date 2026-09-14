@@ -1,0 +1,110 @@
+name: gate004-annotation-comparison
+
+on:
+  push:
+    paths:
+      - 'data/analysis/annotation_pilot_annotations/annotator_a.json'
+      - 'data/analysis/annotation_pilot_annotations/annotator_b.json'
+      - 'scripts/validate_annotations.py'
+      - 'scripts/validate_annotation_pilot_pair.py'
+      - 'scripts/compare_annotation_pilots.py'
+      - 'scripts/classify_annotation_disagreements.py'
+      - '.github/workflows/gate004-annotation-comparison.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gate-004-annotation-comparison
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  comparison:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install project and test dependencies
+        run: |
+          python -m pip install --upgrade pip pytest
+          python -m pip install -e .
+
+      - name: Run tests
+        run: python -m pytest
+
+      - name: Validate annotation documents
+        run: |
+          python scripts/validate_annotations.py \
+            --input-dir data/analysis/annotation_pilot_annotations \
+            --output data/analysis/annotation_validation.json
+
+      - name: Validate pilot pair integrity
+        run: |
+          python scripts/validate_annotation_pilot_pair.py \
+            --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
+            --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
+            --output data/analysis/annotation_pilot_pair_validation.json
+
+      - name: Compare independent annotations
+        run: |
+          python scripts/compare_annotation_pilots.py \
+            --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
+            --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
+            --output data/analysis/annotation_agreement.json
+
+      - name: Classify disagreements
+        run: |
+          python scripts/classify_annotation_disagreements.py \
+            --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
+            --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
+            --output data/analysis/annotation_disagreements.json
+
+      - name: Emit GATE-004 comparison evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          agreement = json.loads(Path('data/analysis/annotation_agreement.json').read_text(encoding='utf-8'))
+          disagreements = json.loads(Path('data/analysis/annotation_disagreements.json').read_text(encoding='utf-8'))
+          validation = json.loads(Path('data/analysis/annotation_validation.json').read_text(encoding='utf-8'))
+          pair = json.loads(Path('data/analysis/annotation_pilot_pair_validation.json').read_text(encoding='utf-8'))
+          pilot = json.loads(Path('data/analysis/annotation_pilot.json').read_text(encoding='utf-8')) if Path('data/analysis/annotation_pilot.json').exists() else {}
+          evidence = {
+              'evidence_version': 'GATE-004-ANNOTATION-COMPARISON-0.1',
+              'gate_004_status': 'IN_PROGRESS' if disagreements.get('status') != 'PASS' else 'CANDIDATE_FOR_REVIEW',
+              'validation': validation,
+              'pair_validation': pair,
+              'agreement': agreement,
+              'disagreements': disagreements,
+              'pilot_identity': {
+                  'cid': pilot.get('cid'),
+                  'sample_size': pilot.get('sample_size'),
+                  'selected_sid_sha256': pilot.get('selected_sid_sha256')
+              },
+              'interpretation': 'Exact annotation agreement is measured over the frozen SID set. Agreement does not establish semantic equivalence, historical validity, or causal interpretation.'
+          }
+          Path('data/analysis/gate004_annotation_comparison_evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          print(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload comparison evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate004-annotation-comparison
+          path: |
+            data/analysis/annotation_validation.json
+            data/analysis/annotation_pilot_pair_validation.json
+            data/analysis/annotation_agreement.json
+            data/analysis/annotation_disagreements.json
+            data/analysis/gate004_annotation_comparison_evidence.json
+          if-no-files-found: error
