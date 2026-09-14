@@ -51,7 +51,7 @@ A National Library of Israel digitized Zohar witness is available as an independ
 
 ## Current evidence — snapshot integrity
 
-The RAW snapshot is now present in the repository and has been committed by GitHub Actions in commit `6235700797e34a9028bebf081b16e44a16cd5cd8` (`data: add verified Wikisource RAW snapshot`, 2026-09-14T08:28:54Z). The commit updates the immutable snapshot manifest and validation record, including the retrieval timestamp and manifest digest. fileciteturn9file0L3-L15
+The RAW snapshot is now present in the repository and has been committed by GitHub Actions in commit `6235700797e34a9028bebf081b16e44a16cd5cd8` (`data: add verified Wikisource RAW snapshot`, 2026-09-14T08:28:54Z). The commit updates the immutable snapshot manifest and validation record, including the retrieval timestamp and manifest digest.
 
 The committed validation artifact reports:
 
@@ -64,9 +64,9 @@ The committed validation artifact reports:
 - non-empty file verification included
 - deterministic sample containing Hebrew-script characters included
 
-The validator explicitly limits this evidence to acquisition integrity and states that it does not establish textual correctness against a historical witness. fileciteturn11file0L2-L2
+The validator explicitly limits this evidence to acquisition integrity and states that it does not establish textual correctness against a historical witness.
 
-The manifest records source, API, license, UTC-equivalent retrieval timestamp field, and `page_count: 1721`; it also begins the per-page sequence/title/pageid inventory. fileciteturn12file0L2-L2
+The manifest records source, API, license, retrieval timestamp field, and `page_count: 1721`; it also begins the per-page sequence/title/pageid inventory.
 
 ## Corrected gate decision
 
