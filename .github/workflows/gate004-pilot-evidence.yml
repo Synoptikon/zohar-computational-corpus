@@ -1,0 +1,136 @@
+name: gate004-pilot-evidence
+
+on:
+  push:
+    paths:
+      - '.github/workflows/gate004-pilot-evidence.yml'
+      - 'scripts/acquire_wikisource_zohar.py'
+      - 'scripts/validate_corpus_snapshot.py'
+      - 'scripts/normalize_corpus.py'
+      - 'scripts/segment_corpus.py'
+      - 'scripts/audit_normalized_offsets.py'
+      - 'scripts/audit_segments.py'
+      - 'scripts/select_annotation_pilot.py'
+      - 'scripts/init_annotation_pilot.py'
+      - 'scripts/validate_annotation_pilot_pair.py'
+      - 'src/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  pilot-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Acquire RAW snapshot
+        run: |
+          python scripts/acquire_wikisource_zohar.py \
+            --output data/raw/zohar/wikisource
+
+      - name: Validate RAW snapshot
+        run: |
+          python scripts/validate_corpus_snapshot.py \
+            data/raw/zohar/wikisource
+
+      - name: Normalize corpus
+        run: python scripts/normalize_corpus.py
+
+      - name: Audit normalized offsets
+        run: |
+          python scripts/audit_normalized_offsets.py \
+            --input-dir data/normalized/zohar/wikisource \
+            --output data/analysis/normalized_offsets_audit.json
+
+      - name: Segment corpus with authoritative CID
+        run: |
+          python scripts/segment_corpus.py \
+            --input-dir data/normalized/zohar/wikisource \
+            --output-dir data/segmented/zohar/wikisource \
+            --repo-root .
+
+      - name: Audit SID segmentation
+        run: |
+          python scripts/audit_segments.py \
+            --input-dir data/segmented/zohar/wikisource \
+            --output data/analysis/segment_audit.json
+
+      - name: Select deterministic 30-SID pilot
+        run: |
+          python scripts/select_annotation_pilot.py \
+            --input-dir data/segmented/zohar/wikisource \
+            --output data/analysis/annotation_pilot.json \
+            --sample-size 30
+
+      - name: Initialize independent annotation shells
+        run: |
+          python scripts/init_annotation_pilot.py \
+            --pilot data/analysis/annotation_pilot.json \
+            --output-dir data/analysis/annotation_pilot_annotations
+
+      - name: Validate pilot pair integrity
+        run: |
+          python scripts/validate_annotation_pilot_pair.py \
+            --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
+            --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
+            --output data/analysis/annotation_pilot_pair_validation.json
+
+      - name: Emit evidence summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          pilot = json.loads(Path('data/analysis/annotation_pilot.json').read_text(encoding='utf-8'))
+          pair = json.loads(Path('data/analysis/annotation_pilot_pair_validation.json').read_text(encoding='utf-8'))
+          segment = json.loads(Path('data/analysis/segment_audit.json').read_text(encoding='utf-8'))
+          normalized = json.loads(Path('data/analysis/normalized_offsets_audit.json').read_text(encoding='utf-8'))
+
+          evidence = {
+              'evidence_version': 'GATE-004-PILOT-EVIDENCE-0.1',
+              'pilot_status': 'EXECUTED',
+              'annotation_status': 'NOT_YET_ANNOTATED',
+              'pilot': {
+                  'cid': pilot['cid'],
+                  'population_size': pilot['population_size'],
+                  'sample_size': pilot['sample_size'],
+                  'population_sid_sha256': pilot['population_sid_sha256'],
+                  'selected_sid_sha256': pilot['selected_sid_sha256'],
+              },
+              'normalized_audit_status': normalized['status'],
+              'segment_audit_status': segment['status'],
+              'pair_validation': pair,
+              'gate_004_status': 'IN_PROGRESS',
+              'interpretation': 'This artifact proves reproducible pilot selection and pair integrity on the acquired corpus. It does not constitute inter-annotator agreement evidence because both annotation shells are intentionally UNANNOTATED.'
+          }
+          Path('data/analysis/gate004_pilot_evidence.json').write_text(
+              json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload GATE-004 pilot evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate004-pilot-evidence
+          path: |
+            data/analysis/gate004_pilot_evidence.json
+            data/analysis/annotation_pilot.json
+            data/analysis/annotation_pilot_pair_validation.json
+            data/analysis/normalized_offsets_audit.json
+            data/analysis/segment_audit.json
+            data/analysis/annotation_pilot_annotations/annotator_a.json
+            data/analysis/annotation_pilot_annotations/annotator_b.json
+          if-no-files-found: error
