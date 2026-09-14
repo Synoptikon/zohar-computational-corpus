@@ -16,6 +16,20 @@ on:
       - 'data/sources/zohar_primary_wikisource.json'
       - 'data/analysis/segmentation_rules_v0.1.md'
       - 'data/analysis/segment_contract_v0.1.md'
+  pull_request:
+    paths:
+      - '.github/workflows/gate002-reproducibility.yml'
+      - 'scripts/normalize_corpus.py'
+      - 'scripts/audit_normalized_offsets.py'
+      - 'scripts/segment_corpus.py'
+      - 'scripts/audit_segments.py'
+      - 'scripts/verify_segmentation_reproducibility.py'
+      - 'tests/**'
+      - 'src/**'
+      - 'data/raw/zohar/wikisource/**'
+      - 'data/sources/zohar_primary_wikisource.json'
+      - 'data/analysis/segmentation_rules_v0.1.md'
+      - 'data/analysis/segment_contract_v0.1.md'
   workflow_dispatch:
 
 permissions:
