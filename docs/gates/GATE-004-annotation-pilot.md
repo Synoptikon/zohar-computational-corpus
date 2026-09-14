@@ -7,6 +7,7 @@
 **Guidelines:** `ANNOTATION-GUIDELINES-0.1`
 **Agreement:** `ANNOTATION-AGREEMENT-0.1`
 **Disagreement classification:** `ANNOTATION-DISAGREEMENT-0.1`
+**Pair validation:** `ANNOTATION-PILOT-PAIR-VALIDATION-0.1`
 
 ## Objective
 
@@ -20,10 +21,12 @@ Determine whether independent annotators can apply the current structural annota
 - `data/analysis/annotation_agreement_v0.1.md`
 - `scripts/select_annotation_pilot.py`
 - `scripts/init_annotation_pilot.py`
+- `scripts/validate_annotation_pilot_pair.py`
 - `scripts/compare_annotation_pilots.py`
 - `scripts/classify_annotation_disagreements.py`
 - `tests/test_select_annotation_pilot.py`
 - `tests/test_init_annotation_pilot.py`
+- `tests/test_validate_annotation_pilot_pair.py`
 - `tests/test_compare_annotation_pilots.py`
 - `tests/test_classify_annotation_disagreements.py`
 
@@ -71,6 +74,20 @@ The population and selected-set digests make corpus drift detectable before anno
 
 The shells preserve the frozen pilot metadata and SID set. They must be populated independently; neither annotator's decisions are input to the other's shell.
 
+## Pair integrity validation
+
+`scripts/validate_annotation_pilot_pair.py` implements `ANNOTATION-PILOT-PAIR-VALIDATION-0.1`.
+
+Before agreement comparison, the pair validator verifies:
+
+- annotator identities are exactly `annotator_a` and `annotator_b`;
+- required frozen-pilot metadata is identical;
+- SID sets are identical and collision-free;
+- the selected SID digest matches the actual pair SID set;
+- each segment contains the expected annotation-list and abstention fields.
+
+A pair that fails these checks MUST NOT proceed to agreement calculation. This validation establishes that differences measured later are annotation decisions rather than pilot-population or metadata drift.
+
 ## Agreement comparison
 
 `scripts/compare_annotation_pilots.py` implements `ANNOTATION-AGREEMENT-0.1`.
@@ -105,7 +122,7 @@ No disagreement category is treated as semantic error automatically. Classificat
 
 ## Execution status
 
-The selector implementation, fingerprint tests, independent-shell generator, agreement comparator, and disagreement classifier are committed. The real 7,850-SID pilot artifact has **not yet been executed in the project working tree** and therefore no frozen pilot evidence or agreement result is claimed here.
+The selector implementation, fingerprint tests, independent-shell generator, pair-integrity validator, agreement comparator, and disagreement classifier are committed. The real 7,850-SID pilot artifact has **not yet been executed in the project working tree** and therefore no frozen pilot evidence or agreement result is claimed here.
 
 Expected execution:
 
@@ -118,9 +135,14 @@ python scripts/select_annotation_pilot.py \
 python scripts/init_annotation_pilot.py \
   --pilot data/analysis/annotation_pilot.json \
   --output-dir data/analysis/annotation_pilot_annotations
+
+python scripts/validate_annotation_pilot_pair.py \
+  --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
+  --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
+  --output data/analysis/annotation_pilot_pair_validation.json
 ```
 
-The resulting artifact must be preserved as the frozen pilot input before either annotator begins coding.
+The resulting artifact must be preserved as the frozen pilot input before either annotator begins coding. Pair validation must PASS before agreement comparison.
 
 After independent coding and structural validation:
 
@@ -143,13 +165,14 @@ GATE-004 cannot be marked `VALIDATED` until all of the following exist:
 1. frozen pilot selection;
 2. two independent annotation records for the same frozen SIDs;
 3. structural validation of both annotation sets;
-4. reproducible agreement calculation;
-5. disagreement classification;
-6. documented changes, if any, to vocabulary or guidelines;
-7. final rerun of structural validation.
+4. pair-integrity validation;
+5. reproducible agreement calculation;
+6. disagreement classification;
+7. documented changes, if any, to vocabulary or guidelines;
+8. final rerun of structural validation.
 
 LLM output is not independent human ground truth and remains `CANDIDATE` until reviewed under the annotation schema.
 
 ## Current limitation
 
-The selector, integrity fingerprints, independent shells, agreement comparator, and disagreement classifier are implemented, but the real pilot has not yet been executed in the project working tree and no independent annotation agreement result has been produced. Therefore the gate remains `IN_PROGRESS`.
+The selector, integrity fingerprints, independent shells, pair-integrity validator, agreement comparator, and disagreement classifier are implemented, but the real pilot has not yet been executed in the project working tree and no independent annotation agreement result has been produced. Therefore the gate remains `IN_PROGRESS`.
