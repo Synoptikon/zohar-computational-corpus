@@ -44,23 +44,39 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
+
           ready = True
           reasons = []
+          base = Path('data/analysis/annotation_pilot_annotations')
+          base.mkdir(parents=True, exist_ok=True)
+
           for name in ('annotator_a.json', 'annotator_b.json'):
-              path = Path('data/analysis/annotation_pilot_annotations') / name
-              document = json.loads(path.read_text(encoding='utf-8'))
+              path = base / name
+              if not path.exists():
+                  ready = False
+                  reasons.append(f'{name}:MISSING')
+                  continue
+              try:
+                  document = json.loads(path.read_text(encoding='utf-8'))
+              except (OSError, json.JSONDecodeError) as exc:
+                  ready = False
+                  reasons.append(f'{name}:INVALID_JSON:{type(exc).__name__}')
+                  continue
               if document.get('status') == 'UNANNOTATED':
                   ready = False
                   reasons.append(f'{name}:UNANNOTATED')
               if not isinstance(document.get('segments'), list) or len(document['segments']) != 30:
                   ready = False
                   reasons.append(f'{name}:INVALID_OR_MISSING_30_SEGMENTS')
+
           Path('data/analysis').mkdir(parents=True, exist_ok=True)
           report = {'status': 'READY' if ready else 'BLOCKED', 'reasons': reasons}
-          Path('data/analysis/annotation_readiness.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+          Path('data/analysis/annotation_readiness.json').write_text(
+              json.dumps(report, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
           with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as out:
               out.write(f"ready={'true' if ready else 'false'}\n")
-          print(json.dumps(report, indent=2))
+          print(json.dumps(report, indent=2, sort_keys=True))
           PY
       - name: Emit blocked evidence
         if: steps.readiness.outputs.ready != 'true'
@@ -72,11 +88,13 @@ jobs:
           evidence = {
               'evidence_version': 'GATE-004-ANNOTATION-COMPARISON-0.1',
               'gate_004_status': 'BLOCKED',
-              'reason': 'Independent annotation documents are not yet populated.',
+              'reason': 'Independent annotation documents are not yet populated and structurally ready.',
               'readiness': readiness,
               'interpretation': 'No agreement or disagreement metric is computed until both independent annotation documents are populated and structurally valid.'
           }
-          Path('data/analysis/gate004_annotation_comparison_evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          Path('data/analysis/gate004_annotation_comparison_evidence.json').write_text(
+              json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
           PY
       - name: Validate annotation documents
         if: steps.readiness.outputs.ready == 'true'
@@ -113,7 +131,9 @@ jobs:
               'disagreements': disagreements,
               'interpretation': 'Exact annotation agreement is measured over the frozen SID set. Agreement does not establish semantic equivalence, historical validity, or causal interpretation.'
           }
-          Path('data/analysis/gate004_annotation_comparison_evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+          Path('data/analysis/gate004_annotation_comparison_evidence.json').write_text(
+              json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + '\n', encoding='utf-8'
+          )
           PY
       - name: Upload comparison evidence
         if: always()
