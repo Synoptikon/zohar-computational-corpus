@@ -14,6 +14,7 @@ on:
       - 'scripts/init_annotation_pilot.py'
       - 'scripts/validate_annotation_pilot_pair.py'
       - 'data/raw/**'
+      - 'docs/gates/**'
       - 'src/**'
   workflow_dispatch:
 
