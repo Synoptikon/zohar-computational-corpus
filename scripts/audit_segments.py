@@ -83,7 +83,8 @@ def audit_file(path: Path) -> dict:
             errors.append({"type": "INVALID_TEXT_TYPE", "segment_index": index})
 
         if segment["is_empty"] != (segment["normalized_text"] == ""):
-            errors.append({"type": "EMPTY_FLAG_MISMATCH", "segment_index": index})\n
+            errors.append({"type": "EMPTY_FLAG_MISMATCH", "segment_index": index})
+
     return {
         "file": str(path),
         "status": "PASS" if not errors else "FAIL",
