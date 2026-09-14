@@ -5,6 +5,7 @@
 **Pilot contract:** `ANNOTATION-PILOT-0.1`
 **Vocabulary:** `ANNOTATION-VOCABULARY-0.1`
 **Guidelines:** `ANNOTATION-GUIDELINES-0.1`
+**Agreement:** `ANNOTATION-AGREEMENT-0.1`
 
 ## Objective
 
@@ -15,8 +16,13 @@ Determine whether independent annotators can apply the current structural annota
 - `data/analysis/annotation_vocabulary_v0.1.md`
 - `data/analysis/annotation_guidelines_v0.1.md`
 - `data/analysis/annotation_pilot_protocol_v0.1.md`
+- `data/analysis/annotation_agreement_v0.1.md`
 - `scripts/select_annotation_pilot.py`
+- `scripts/init_annotation_pilot.py`
+- `scripts/compare_annotation_pilots.py`
 - `tests/test_select_annotation_pilot.py`
+- `tests/test_init_annotation_pilot.py`
+- `tests/test_compare_annotation_pilots.py`
 
 ## Deterministic selection
 
@@ -53,9 +59,34 @@ The resulting artifact records:
 
 The population and selected-set digests make corpus drift detectable before annotation comparison. Re-running the selector against a changed SID population produces different freeze evidence rather than silently reusing an obsolete pilot.
 
+## Independent annotation
+
+`init_annotation_pilot.py` generates two empty annotation shells from the frozen pilot:
+
+- `annotator_a.json`
+- `annotator_b.json`
+
+The shells preserve the frozen pilot metadata and SID set. They must be populated independently; neither annotator's decisions are input to the other's shell.
+
+## Agreement comparison
+
+`scripts/compare_annotation_pilots.py` implements `ANNOTATION-AGREEMENT-0.1`.
+
+Comparison is performed at `SID` level using canonical signatures:
+
+`(annotation_type, canonical(value), validation_status)`
+
+`EID` is intentionally excluded from the agreement key because independent annotators may assign different local entity identifiers to an otherwise identical decision.
+
+The comparator requires identical frozen-pilot metadata and identical SID sets. It rejects unannotated shells and produces:
+
+`agreement_rate = agreements / total_SID`
+
+This is exact structural agreement, not semantic validity and not an inferential statistic.
+
 ## Execution status
 
-The selector implementation and its fingerprint tests are committed. The real 7,850-SID pilot artifact has **not yet been executed in the project working tree** and therefore no frozen pilot evidence is claimed here.
+The selector implementation, fingerprint tests, independent-shell generator, and agreement comparator are committed. The real 7,850-SID pilot artifact has **not yet been executed in the project working tree** and therefore no frozen pilot evidence or agreement result is claimed here.
 
 Expected execution:
 
@@ -64,9 +95,22 @@ python scripts/select_annotation_pilot.py \
   --input-dir data/segmented/zohar/wikisource \
   --output data/analysis/annotation_pilot.json \
   --sample-size 30
+
+python scripts/init_annotation_pilot.py \
+  --pilot data/analysis/annotation_pilot.json \
+  --output-dir data/analysis/annotation_pilot_annotations
 ```
 
 The resulting artifact must be preserved as the frozen pilot input before either annotator begins coding.
+
+After independent coding and structural validation:
+
+```bash
+python scripts/compare_annotation_pilots.py \
+  --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
+  --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
+  --output data/analysis/annotation_agreement.json
+```
 
 ## Validation requirements
 
@@ -84,4 +128,4 @@ LLM output is not independent human ground truth and remains `CANDIDATE` until r
 
 ## Current limitation
 
-The selector and protocol are implemented, including corpus-drift fingerprints, but the pilot has not yet been executed in the project working tree and no independent annotation agreement result has been produced. Therefore the gate remains `IN_PROGRESS`.
+The selector, integrity fingerprints, independent shells, and agreement comparator are implemented, but the real pilot has not yet been executed in the project working tree and no independent annotation agreement result has been produced. Therefore the gate remains `IN_PROGRESS`.
