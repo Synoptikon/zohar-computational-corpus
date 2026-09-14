@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "validation": "PASS",
   "page_count": 1721,
-  "manifest_sha256": "9081654d6565773aaa9374fc4b05e7fe060d1b7b945c5430463a75c53c7f7b0c",
+  "manifest_sha256": "0d05ffc9f07322abd87362e286b7f92dc96bc152a63fecbb2f4fd248e306c24e",
   "sample_seed": 20260913,
   "sample_sequences": [
     1,
