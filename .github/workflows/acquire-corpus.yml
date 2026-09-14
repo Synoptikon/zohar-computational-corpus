@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: gate-001-acquire
+  cancel-in-progress: false
+
 jobs:
   acquire:
     runs-on: ubuntu-latest
