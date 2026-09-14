@@ -1,5 +1,6 @@
 name: gate002-reproducibility
 
+# GATE-002 reproducibility execution trigger/audit baseline.
 on:
   push:
     paths:
