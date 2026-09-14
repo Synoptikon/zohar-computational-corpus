@@ -6,6 +6,7 @@
 **Vocabulary:** `ANNOTATION-VOCABULARY-0.1`
 **Guidelines:** `ANNOTATION-GUIDELINES-0.1`
 **Agreement:** `ANNOTATION-AGREEMENT-0.1`
+**Disagreement classification:** `ANNOTATION-DISAGREEMENT-0.1`
 
 ## Objective
 
@@ -20,9 +21,11 @@ Determine whether independent annotators can apply the current structural annota
 - `scripts/select_annotation_pilot.py`
 - `scripts/init_annotation_pilot.py`
 - `scripts/compare_annotation_pilots.py`
+- `scripts/classify_annotation_disagreements.py`
 - `tests/test_select_annotation_pilot.py`
 - `tests/test_init_annotation_pilot.py`
 - `tests/test_compare_annotation_pilots.py`
+- `tests/test_classify_annotation_disagreements.py`
 
 ## Deterministic selection
 
@@ -84,9 +87,25 @@ The comparator requires identical frozen-pilot metadata and identical SID sets. 
 
 This is exact structural agreement, not semantic validity and not an inferential statistic.
 
+## Disagreement classification
+
+`scripts/classify_annotation_disagreements.py` implements `ANNOTATION-DISAGREEMENT-0.1`.
+
+For each SID it distinguishes:
+
+- `AGREEMENT`
+- `TYPE_MISMATCH`
+- `VALUE_MISMATCH`
+- `VALIDATION_STATUS_MISMATCH`
+- `ABSTAIN_MISMATCH`
+
+The classifier preserves both canonical annotation signatures for every disagreement. This creates an auditable bridge from the aggregate agreement rate to the individual SIDs requiring adjudication or guideline review.
+
+No disagreement category is treated as semantic error automatically. Classification describes the structural difference between the two annotation outputs; adjudication remains a separate methodological step.
+
 ## Execution status
 
-The selector implementation, fingerprint tests, independent-shell generator, and agreement comparator are committed. The real 7,850-SID pilot artifact has **not yet been executed in the project working tree** and therefore no frozen pilot evidence or agreement result is claimed here.
+The selector implementation, fingerprint tests, independent-shell generator, agreement comparator, and disagreement classifier are committed. The real 7,850-SID pilot artifact has **not yet been executed in the project working tree** and therefore no frozen pilot evidence or agreement result is claimed here.
 
 Expected execution:
 
@@ -110,6 +129,11 @@ python scripts/compare_annotation_pilots.py \
   --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
   --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
   --output data/analysis/annotation_agreement.json
+
+python scripts/classify_annotation_disagreements.py \
+  --annotator-a data/analysis/annotation_pilot_annotations/annotator_a.json \
+  --annotator-b data/analysis/annotation_pilot_annotations/annotator_b.json \
+  --output data/analysis/annotation_disagreements.json
 ```
 
 ## Validation requirements
@@ -128,4 +152,4 @@ LLM output is not independent human ground truth and remains `CANDIDATE` until r
 
 ## Current limitation
 
-The selector, integrity fingerprints, independent shells, and agreement comparator are implemented, but the real pilot has not yet been executed in the project working tree and no independent annotation agreement result has been produced. Therefore the gate remains `IN_PROGRESS`.
+The selector, integrity fingerprints, independent shells, agreement comparator, and disagreement classifier are implemented, but the real pilot has not yet been executed in the project working tree and no independent annotation agreement result has been produced. Therefore the gate remains `IN_PROGRESS`.
