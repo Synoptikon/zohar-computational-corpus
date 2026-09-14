@@ -78,14 +78,19 @@ def validate_document(path: Path) -> dict:
 def validate_directory(input_dir: Path, output_path: Path) -> dict:
     files = sorted(input_dir.glob("*.json"))
     results = [validate_document(path) for path in files]
+    directory_errors: list[dict] = []
+    if not files:
+        directory_errors.append({"type": "NO_ANNOTATION_FILES"})
+
     report = {
         "validation_version": SCHEMA_VERSION,
         "input_dir": str(input_dir),
         "total_files": len(results),
         "failed_files": sum(result["status"] != "PASS" for result in results),
         "total_records": sum(result["records"] for result in results),
-        "total_errors": sum(len(result["errors"]) for result in results),
-        "status": "PASS" if all(result["status"] == "PASS" for result in results) else "FAIL",
+        "total_errors": sum(len(result["errors"]) for result in results) + len(directory_errors),
+        "errors": directory_errors,
+        "status": "PASS" if files and all(result["status"] == "PASS" for result in results) else "FAIL",
         "files": results,
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
